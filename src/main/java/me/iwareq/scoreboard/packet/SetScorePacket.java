@@ -1,6 +1,8 @@
 package me.iwareq.scoreboard.packet;
 
+import cn.nukkit.network.connection.util.HandleByteBuf;
 import cn.nukkit.network.protocol.DataPacket;
+import cn.nukkit.network.protocol.PacketHandler;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import me.iwareq.scoreboard.packet.data.ScorerInfo;
@@ -18,38 +20,45 @@ public class SetScorePacket extends DataPacket {
 	private final List<ScorerInfo> infos = new ArrayList<>();
 
 	@Override
-	public byte pid() {
+	public int pid() {
 		return NETWORK_ID;
 	}
 
 	@Override
-	public void decode() {/**/}
+	public void decode(HandleByteBuf handleByteBuf) {
+
+	}
 
 	@Override
-	public void encode() {
-		this.reset();
+	public void encode(HandleByteBuf hBB) {
+		hBB.resetWriterIndex();
 
-		this.putByte((byte) this.action.ordinal());
-		this.putUnsignedVarInt(this.infos.size());
+		hBB.writeByte((byte) this.action.ordinal());
+		hBB.writeUnsignedVarInt(this.infos.size());
 		for (ScorerInfo info : this.infos) {
-			this.putVarLong(info.getScoreboardId());
-			this.putString(info.getObjectiveId());
-			this.putLInt(info.getScore());
+			hBB.writeVarLong(info.getScoreboardId());
+			hBB.writeString(info.getObjectiveId());
+			hBB.writeIntLE(info.getScore());
 			if (this.action == Action.SET) {
-				this.putByte((byte) info.getType().ordinal());
+				hBB.writeByte((byte) info.getType().ordinal());
 				switch (info.getType()) {
 					case ENTITY:
 					case PLAYER:
-						this.putUnsignedVarLong(info.getEntityId());
+						hBB.writeUnsignedVarLong(info.getEntityId());
 						break;
 					case FAKE:
-						this.putString(info.getName());
+						hBB.writeString(info.getName());
 						break;
 					default:
 						throw new IllegalArgumentException("Invalid score type received");
 				}
 			}
 		}
+	}
+
+	@Override
+	public void handle(PacketHandler packetHandler) {
+
 	}
 
 	public enum Action {
